@@ -1,0 +1,52 @@
+{
+  "name": "Secure AI Agent Dashboard",
+  "short_name": "AI Dashboard",
+  "description": "Monitor and control your AI agent system with real-time insights",
+  "start_url": "/",
+  "display": "standalone",
+  "background_color": "#0a0a0b",
+  "theme_color": "#6366f1",
+  "orientation": "any",
+  "scope": "/",
+  "id": "ai-agent-dashboard",
+  "icons": [
+    {
+      "src": "/icon-192.png",
+      "sizes": "192x192",
+      "type": "image/png",
+      "purpose": "any maskable"
+    },
+    {
+      "src": "/icon-512.png",
+      "sizes": "512x512",
+      "type": "image/png",
+      "purpose": "any maskable"
+    }
+  ],
+  "categories": ["productivity", "utilities", "developer tools"],
+  "screenshots": [],
+  "shortcuts": [
+    {
+      "name": "Dashboard",
+      "short_name": "Home",
+      "url": "/",
+      "description": "View system status"
+    },
+    {
+      "name": "Quick Actions",
+      "short_name": "Actions",
+      "url": "/quick-actions",
+      "description": "Execute common tasks"
+    },
+    {
+      "name": "Alerts",
+      "short_name": "Alerts",
+      "url": "/alerts",
+      "description": "View notifications"
+    }
+  ],
+  "display_override": ["window-controls-overlay", "standalone", "browser"],
+  "launch_handler": {
+    "client_mode": "focus-existing"
+  }
+}
