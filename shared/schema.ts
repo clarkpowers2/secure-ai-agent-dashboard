@@ -236,3 +236,30 @@ export const coiReviewSchema = z.object({
 });
 
 export type CoiReview = z.infer<typeof coiReviewSchema>;
+
+// Insurance Policies
+export const insurancePolicySchema = z.object({
+  id: z.string(),
+  policyType: z.enum(["health", "auto", "home", "life", "liability", "professional", "workers_comp", "other"]),
+  provider: z.string().min(1).max(200),
+  policyNumber: z.string().min(1).max(100),
+  coverageAmount: z.number().optional(),
+  premium: z.number().optional(),
+  startDate: z.string(),
+  expirationDate: z.string(),
+  status: z.enum(["active", "expiring_soon", "expired", "renewed", "cancelled"]),
+  notes: z.string().max(1000).optional(),
+  reminderDays: z.number().min(0).max(365).default(30),
+  createdAt: z.string(),
+  updatedAt: z.string(),
+});
+
+export type InsurancePolicy = z.infer<typeof insurancePolicySchema>;
+
+export const insertInsurancePolicySchema = insurancePolicySchema.omit({ 
+  id: true, 
+  status: true,
+  createdAt: true, 
+  updatedAt: true 
+});
+export type InsertInsurancePolicy = z.infer<typeof insertInsurancePolicySchema>;
