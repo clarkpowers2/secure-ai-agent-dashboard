@@ -1,4 +1,4 @@
-import { type User, type InsertUser, type SystemStatus, type PrivacySettings, type ActivityLog, type PatternData, type ModuleStatus, type Appointment, type InsertAppointment, type AlertRule, type InsertAlertRule, type AlertNotification, type Playbook, type PlaybookExecution, type AuditEvent, type DashboardWidget, type SessionSettings, type BackupData } from "@shared/schema";
+import { type User, type InsertUser, type SystemStatus, type PrivacySettings, type ActivityLog, type PatternData, type ModuleStatus, type Appointment, type InsertAppointment, type AlertRule, type InsertAlertRule, type AlertNotification, type Playbook, type PlaybookExecution, type AuditEvent, type DashboardWidget, type SessionSettings, type BackupData, type CoiDisclosure, type InsertCoiDisclosure, type CoiReview, type InsurancePolicy, type InsertInsurancePolicy } from "@shared/schema";
 import { randomUUID } from "crypto";
 
 // Agent settings interface
@@ -88,6 +88,21 @@ export interface IStorage {
   createBackup(type: "full" | "settings" | "logs" | "appointments"): Promise<BackupData>;
   getBackups(): Promise<BackupData[]>;
   getExportData(type: string): Promise<object>;
+  
+  // COI Disclosures
+  getCoiDisclosures(): Promise<CoiDisclosure[]>;
+  getCoiDisclosure(id: string): Promise<CoiDisclosure | undefined>;
+  createCoiDisclosure(disclosure: InsertCoiDisclosure): Promise<CoiDisclosure>;
+  updateCoiDisclosure(id: string, updates: Partial<CoiDisclosure>): Promise<CoiDisclosure | undefined>;
+  deleteCoiDisclosure(id: string): Promise<boolean>;
+  reviewCoiDisclosure(id: string, review: CoiReview): Promise<CoiDisclosure | undefined>;
+  
+  // Insurance Policies
+  getInsurancePolicies(): Promise<InsurancePolicy[]>;
+  getInsurancePolicy(id: string): Promise<InsurancePolicy | undefined>;
+  createInsurancePolicy(policy: InsertInsurancePolicy): Promise<InsurancePolicy>;
+  updateInsurancePolicy(id: string, updates: Partial<InsurancePolicy>): Promise<InsurancePolicy | undefined>;
+  deleteInsurancePolicy(id: string): Promise<boolean>;
 }
 
 export class MemStorage implements IStorage {
@@ -109,6 +124,8 @@ export class MemStorage implements IStorage {
   private dashboardWidgets: DashboardWidget[];
   private sessionSettings: SessionSettings;
   private backups: BackupData[];
+  private coiDisclosures: CoiDisclosure[];
+  private insurancePolicies: InsurancePolicy[];
 
   constructor() {
     this.users = new Map();
@@ -346,6 +363,8 @@ export class MemStorage implements IStorage {
     this.playbookExecutions = [];
     this.auditEvents = [];
     this.backups = [];
+    this.coiDisclosures = [];
+    this.insurancePolicies = [];
     
     // Initialize dashboard widgets
     this.dashboardWidgets = [
@@ -840,6 +859,188 @@ export class MemStorage implements IStorage {
           patterns: this.patterns,
         };
     }
+  }
+
+  // COI Disclosures implementation
+  async getCoiDisclosures(): Promise<CoiDisclosure[]> {
+    return this.coiDisclosures;
+  }
+
+  async getCoiDisclosure(id: string): Promise<CoiDisclosure | undefined> {
+    return this.coiDisclosures.find(d => d.id === id);
+  }
+
+  async createCoiDisclosure(disclosure: InsertCoiDisclosure): Promise<CoiDisclosure> {
+    const newDisclosure: CoiDisclosure = {
+      ...disclosure,
+      id: randomUUID(),
+      status: "pending",
+      submittedAt: new Date().toISOString(),
+    };
+    this.coiDisclosures.push(newDisclosure);
+    
+    await this.addAuditEvent({
+      timestamp: new Date().toISOString(),
+      category: "data",
+      action: "COI Disclosure Created",
+      details: `New ${disclosure.relationship} disclosure for ${disclosure.entityName}`,
+      severity: "medium",
+    });
+    
+    return newDisclosure;
+  }
+
+  async updateCoiDisclosure(id: string, updates: Partial<CoiDisclosure>): Promise<CoiDisclosure | undefined> {
+    const index = this.coiDisclosures.findIndex(d => d.id === id);
+    if (index === -1) return undefined;
+    
+    this.coiDisclosures[index] = { ...this.coiDisclosures[index], ...updates };
+    
+    await this.addAuditEvent({
+      timestamp: new Date().toISOString(),
+      category: "data",
+      action: "COI Disclosure Updated",
+      details: `Disclosure ${id} was updated`,
+      severity: "low",
+    });
+    
+    return this.coiDisclosures[index];
+  }
+
+  async deleteCoiDisclosure(id: string): Promise<boolean> {
+    const index = this.coiDisclosures.findIndex(d => d.id === id);
+    if (index === -1) return false;
+    
+    const disclosure = this.coiDisclosures[index];
+    this.coiDisclosures.splice(index, 1);
+    
+    await this.addAuditEvent({
+      timestamp: new Date().toISOString(),
+      category: "data",
+      action: "COI Disclosure Deleted",
+      details: `Disclosure for ${disclosure.entityName} was deleted`,
+      severity: "medium",
+    });
+    
+    return true;
+  }
+
+  async reviewCoiDisclosure(id: string, review: CoiReview): Promise<CoiDisclosure | undefined> {
+    const index = this.coiDisclosures.findIndex(d => d.id === id);
+    if (index === -1) return undefined;
+    
+    this.coiDisclosures[index] = {
+      ...this.coiDisclosures[index],
+      status: review.status,
+      reviewedAt: new Date().toISOString(),
+      reviewedBy: review.reviewedBy,
+      reviewComments: review.comments,
+    };
+    
+    await this.addAuditEvent({
+      timestamp: new Date().toISOString(),
+      category: "data",
+      action: "COI Disclosure Reviewed",
+      details: `Disclosure ${id} reviewed with status: ${review.status}`,
+      severity: "medium",
+    });
+    
+    return this.coiDisclosures[index];
+  }
+
+  // Insurance Policies implementation
+  async getInsurancePolicies(): Promise<InsurancePolicy[]> {
+    // Update statuses based on expiration dates
+    const now = new Date();
+    this.insurancePolicies.forEach(policy => {
+      const expirationDate = new Date(policy.expirationDate);
+      const daysUntilExpiration = Math.floor((expirationDate.getTime() - now.getTime()) / (1000 * 60 * 60 * 24));
+      
+      if (daysUntilExpiration < 0) {
+        policy.status = "expired";
+      } else if (daysUntilExpiration <= policy.reminderDays) {
+        policy.status = "expiring_soon";
+      } else if (policy.status !== "cancelled" && policy.status !== "renewed") {
+        policy.status = "active";
+      }
+    });
+    
+    return this.insurancePolicies;
+  }
+
+  async getInsurancePolicy(id: string): Promise<InsurancePolicy | undefined> {
+    return this.insurancePolicies.find(p => p.id === id);
+  }
+
+  async createInsurancePolicy(policy: InsertInsurancePolicy): Promise<InsurancePolicy> {
+    const now = new Date();
+    const expirationDate = new Date(policy.expirationDate);
+    const daysUntilExpiration = Math.floor((expirationDate.getTime() - now.getTime()) / (1000 * 60 * 60 * 24));
+    
+    let status: InsurancePolicy["status"] = "active";
+    if (daysUntilExpiration < 0) {
+      status = "expired";
+    } else if (daysUntilExpiration <= policy.reminderDays) {
+      status = "expiring_soon";
+    }
+    
+    const newPolicy: InsurancePolicy = {
+      ...policy,
+      id: randomUUID(),
+      status,
+      createdAt: new Date().toISOString(),
+      updatedAt: new Date().toISOString(),
+    };
+    this.insurancePolicies.push(newPolicy);
+    
+    await this.addAuditEvent({
+      timestamp: new Date().toISOString(),
+      category: "data",
+      action: "Insurance Policy Created",
+      details: `New ${policy.policyType} policy from ${policy.provider} (${policy.policyNumber})`,
+      severity: "low",
+    });
+    
+    return newPolicy;
+  }
+
+  async updateInsurancePolicy(id: string, updates: Partial<InsurancePolicy>): Promise<InsurancePolicy | undefined> {
+    const index = this.insurancePolicies.findIndex(p => p.id === id);
+    if (index === -1) return undefined;
+    
+    this.insurancePolicies[index] = {
+      ...this.insurancePolicies[index],
+      ...updates,
+      updatedAt: new Date().toISOString(),
+    };
+    
+    await this.addAuditEvent({
+      timestamp: new Date().toISOString(),
+      category: "data",
+      action: "Insurance Policy Updated",
+      details: `Policy ${this.insurancePolicies[index].policyNumber} was updated`,
+      severity: "low",
+    });
+    
+    return this.insurancePolicies[index];
+  }
+
+  async deleteInsurancePolicy(id: string): Promise<boolean> {
+    const index = this.insurancePolicies.findIndex(p => p.id === id);
+    if (index === -1) return false;
+    
+    const policy = this.insurancePolicies[index];
+    this.insurancePolicies.splice(index, 1);
+    
+    await this.addAuditEvent({
+      timestamp: new Date().toISOString(),
+      category: "data",
+      action: "Insurance Policy Deleted",
+      details: `Policy ${policy.policyNumber} from ${policy.provider} was deleted`,
+      severity: "medium",
+    });
+    
+    return true;
   }
 }
 

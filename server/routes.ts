@@ -532,5 +532,173 @@ export async function registerRoutes(
     }
   });
 
+  // COI Disclosures
+  app.get("/api/coi/disclosures", async (req, res) => {
+    try {
+      const disclosures = await storage.getCoiDisclosures();
+      res.json(disclosures);
+    } catch (error) {
+      res.status(500).json({ error: "Failed to get COI disclosures" });
+    }
+  });
+
+  app.get("/api/coi/disclosures/:id", async (req, res) => {
+    try {
+      const { id } = req.params;
+      const disclosure = await storage.getCoiDisclosure(id);
+      
+      if (disclosure) {
+        res.json(disclosure);
+      } else {
+        res.status(404).json({ error: "Disclosure not found" });
+      }
+    } catch (error) {
+      res.status(500).json({ error: "Failed to get COI disclosure" });
+    }
+  });
+
+  app.post("/api/coi/disclosures", async (req, res) => {
+    try {
+      const { insertCoiDisclosureSchema } = await import("@shared/schema");
+      const data = insertCoiDisclosureSchema.parse(req.body);
+      const disclosure = await storage.createCoiDisclosure(data);
+      res.status(201).json(disclosure);
+    } catch (error) {
+      if (error instanceof z.ZodError) {
+        return res.status(400).json({ error: "Invalid disclosure data" });
+      }
+      res.status(500).json({ error: "Failed to create disclosure" });
+    }
+  });
+
+  app.patch("/api/coi/disclosures/:id", async (req, res) => {
+    try {
+      const { id } = req.params;
+      const { coiDisclosureSchema } = await import("@shared/schema");
+      const updates = coiDisclosureSchema.partial().parse(req.body);
+      const disclosure = await storage.updateCoiDisclosure(id, updates);
+      
+      if (disclosure) {
+        res.json(disclosure);
+      } else {
+        res.status(404).json({ error: "Disclosure not found" });
+      }
+    } catch (error) {
+      if (error instanceof z.ZodError) {
+        return res.status(400).json({ error: "Invalid disclosure data" });
+      }
+      res.status(500).json({ error: "Failed to update disclosure" });
+    }
+  });
+
+  app.delete("/api/coi/disclosures/:id", async (req, res) => {
+    try {
+      const { id } = req.params;
+      const success = await storage.deleteCoiDisclosure(id);
+      
+      if (success) {
+        res.json({ success: true });
+      } else {
+        res.status(404).json({ error: "Disclosure not found" });
+      }
+    } catch (error) {
+      res.status(500).json({ error: "Failed to delete disclosure" });
+    }
+  });
+
+  app.post("/api/coi/disclosures/:id/review", async (req, res) => {
+    try {
+      const { id } = req.params;
+      const { coiReviewSchema } = await import("@shared/schema");
+      const review = coiReviewSchema.parse(req.body);
+      const disclosure = await storage.reviewCoiDisclosure(id, review);
+      
+      if (disclosure) {
+        res.json(disclosure);
+      } else {
+        res.status(404).json({ error: "Disclosure not found" });
+      }
+    } catch (error) {
+      if (error instanceof z.ZodError) {
+        return res.status(400).json({ error: "Invalid review data" });
+      }
+      res.status(500).json({ error: "Failed to review disclosure" });
+    }
+  });
+
+  // Insurance Policies
+  app.get("/api/insurance/policies", async (req, res) => {
+    try {
+      const policies = await storage.getInsurancePolicies();
+      res.json(policies);
+    } catch (error) {
+      res.status(500).json({ error: "Failed to get insurance policies" });
+    }
+  });
+
+  app.get("/api/insurance/policies/:id", async (req, res) => {
+    try {
+      const { id } = req.params;
+      const policy = await storage.getInsurancePolicy(id);
+      
+      if (policy) {
+        res.json(policy);
+      } else {
+        res.status(404).json({ error: "Policy not found" });
+      }
+    } catch (error) {
+      res.status(500).json({ error: "Failed to get insurance policy" });
+    }
+  });
+
+  app.post("/api/insurance/policies", async (req, res) => {
+    try {
+      const { insertInsurancePolicySchema } = await import("@shared/schema");
+      const data = insertInsurancePolicySchema.parse(req.body);
+      const policy = await storage.createInsurancePolicy(data);
+      res.status(201).json(policy);
+    } catch (error) {
+      if (error instanceof z.ZodError) {
+        return res.status(400).json({ error: "Invalid policy data" });
+      }
+      res.status(500).json({ error: "Failed to create policy" });
+    }
+  });
+
+  app.patch("/api/insurance/policies/:id", async (req, res) => {
+    try {
+      const { id } = req.params;
+      const { insurancePolicySchema } = await import("@shared/schema");
+      const updates = insurancePolicySchema.partial().parse(req.body);
+      const policy = await storage.updateInsurancePolicy(id, updates);
+      
+      if (policy) {
+        res.json(policy);
+      } else {
+        res.status(404).json({ error: "Policy not found" });
+      }
+    } catch (error) {
+      if (error instanceof z.ZodError) {
+        return res.status(400).json({ error: "Invalid policy data" });
+      }
+      res.status(500).json({ error: "Failed to update policy" });
+    }
+  });
+
+  app.delete("/api/insurance/policies/:id", async (req, res) => {
+    try {
+      const { id } = req.params;
+      const success = await storage.deleteInsurancePolicy(id);
+      
+      if (success) {
+        res.json({ success: true });
+      } else {
+        res.status(404).json({ error: "Policy not found" });
+      }
+    } catch (error) {
+      res.status(500).json({ error: "Failed to delete policy" });
+    }
+  });
+
   return httpServer;
 }
