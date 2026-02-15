@@ -199,3 +199,40 @@ export const backupDataSchema = z.object({
 });
 
 export type BackupData = z.infer<typeof backupDataSchema>;
+
+// COI (Conflict of Interest) Disclosures
+export const coiDisclosureSchema = z.object({
+  id: z.string(),
+  entityName: z.string().min(1).max(200),
+  relationship: z.enum(["financial", "personal", "professional", "family", "other"]),
+  description: z.string().min(1).max(1000),
+  startDate: z.string(),
+  endDate: z.string().optional(),
+  status: z.enum(["pending", "approved", "rejected", "under_review"]),
+  severity: z.enum(["low", "medium", "high"]),
+  submittedAt: z.string(),
+  reviewedAt: z.string().optional(),
+  reviewedBy: z.string().optional(),
+  reviewComments: z.string().optional(),
+});
+
+export type CoiDisclosure = z.infer<typeof coiDisclosureSchema>;
+
+export const insertCoiDisclosureSchema = coiDisclosureSchema.omit({ 
+  id: true, 
+  status: true, 
+  submittedAt: true, 
+  reviewedAt: true, 
+  reviewedBy: true, 
+  reviewComments: true 
+});
+export type InsertCoiDisclosure = z.infer<typeof insertCoiDisclosureSchema>;
+
+// COI Review
+export const coiReviewSchema = z.object({
+  status: z.enum(["approved", "rejected", "under_review"]),
+  comments: z.string().max(1000).optional(),
+  reviewedBy: z.string().min(1).max(100),
+});
+
+export type CoiReview = z.infer<typeof coiReviewSchema>;

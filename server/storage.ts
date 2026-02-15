@@ -1,4 +1,4 @@
-import { type User, type InsertUser, type SystemStatus, type PrivacySettings, type ActivityLog, type PatternData, type ModuleStatus, type Appointment, type InsertAppointment, type AlertRule, type InsertAlertRule, type AlertNotification, type Playbook, type PlaybookExecution, type AuditEvent, type DashboardWidget, type SessionSettings, type BackupData } from "@shared/schema";
+import { type User, type InsertUser, type SystemStatus, type PrivacySettings, type ActivityLog, type PatternData, type ModuleStatus, type Appointment, type InsertAppointment, type AlertRule, type InsertAlertRule, type AlertNotification, type Playbook, type PlaybookExecution, type AuditEvent, type DashboardWidget, type SessionSettings, type BackupData, type CoiDisclosure, type InsertCoiDisclosure, type CoiReview } from "@shared/schema";
 import { randomUUID } from "crypto";
 
 // Agent settings interface
@@ -88,6 +88,14 @@ export interface IStorage {
   createBackup(type: "full" | "settings" | "logs" | "appointments"): Promise<BackupData>;
   getBackups(): Promise<BackupData[]>;
   getExportData(type: string): Promise<object>;
+  
+  // COI Disclosures
+  getCoiDisclosures(): Promise<CoiDisclosure[]>;
+  getCoiDisclosure(id: string): Promise<CoiDisclosure | undefined>;
+  createCoiDisclosure(disclosure: InsertCoiDisclosure): Promise<CoiDisclosure>;
+  updateCoiDisclosure(id: string, updates: Partial<CoiDisclosure>): Promise<CoiDisclosure | undefined>;
+  deleteCoiDisclosure(id: string): Promise<boolean>;
+  reviewCoiDisclosure(id: string, review: CoiReview): Promise<CoiDisclosure | undefined>;
 }
 
 export class MemStorage implements IStorage {
